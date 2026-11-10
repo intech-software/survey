@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { House } from "lucide-react";
+import { ClipboardList, LayoutTemplate } from "lucide-react";
 import Header from "@/components/header/header";
 import Sidebar from "@/components/sidebar/sidebar";
 import useMobile from "@/hooks/use-mobile";
@@ -11,9 +11,15 @@ import { useSidebarStore } from "@/store/sidebar-store";
 const data = [
   {
     id: "home",
-    name: "Trang chủ",
-    icon: <House className="size-5 shrink-0" />,
+    name: "Khảo sát",
+    icon: <ClipboardList className="size-5 shrink-0" />,
     url: "/home",
+  },
+  {
+    id: "templates",
+    name: "Template",
+    icon: <LayoutTemplate className="size-5 shrink-0" />,
+    url: "/templates",
   },
 ];
 

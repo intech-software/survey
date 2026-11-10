@@ -115,7 +115,7 @@ export default function SurveyRecordDetail({
 
   if (!record && isLoading) {
     return (
-      <section className="flex min-h-56 w-full max-w-4xl items-center justify-center rounded border bg-white shadow-md">
+      <section className="flex min-h-56 w-full flex-1 items-center justify-center rounded border bg-white shadow-md">
         <Loader2 className="size-7 animate-spin text-blue-500" />
       </section>
     );
@@ -123,7 +123,7 @@ export default function SurveyRecordDetail({
 
   if (!record) {
     return (
-      <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+      <section className="w-full flex-1 rounded border bg-white p-4 shadow-md">
         <Button type="button" variant="ghost" onClick={onClose}>
           <ArrowLeft className="size-5" />
           Quay lại
@@ -183,7 +183,7 @@ export default function SurveyRecordDetail({
     setHeaderDraft((current) => (current ? { ...current, [field]: value } : current));
 
   return (
-    <section className="w-full max-w-4xl overflow-hidden rounded border bg-white shadow-md">
+    <section className="w-full flex-1 overflow-hidden rounded border bg-white shadow-md">
       {!connected ? (
         <div className="flex items-center justify-between gap-2 border-b bg-amber-50 px-4 py-2 text-sm text-amber-800">
           <span>Chưa kết nối cập nhật trực tiếp.</span>

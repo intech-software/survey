@@ -159,7 +159,7 @@ export default function InlineSurveyRecords() {
 
   if (selectedRecord) {
     return (
-      <div className="w-full max-w-4xl pb-24">
+      <div className="flex min-h-full w-full flex-col">
         <SurveyRecordDetail
           recordId={selectedRecord.id}
           initialRecord={selectedRecord}
@@ -235,8 +235,8 @@ export default function InlineSurveyRecords() {
   };
 
   return (
-    <div className="w-full max-w-4xl pb-24">
-      <section className="w-full rounded border bg-white p-4 shadow-md">
+    <div className="flex min-h-full w-full flex-col">
+      <section className="w-full flex-1 rounded border bg-white p-4 shadow-md">
         <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h2 className="text-2xl font-bold leading-tight text-blue-500 md:text-3xl">
@@ -342,7 +342,9 @@ export default function InlineSurveyRecords() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="w-10 shrink-0" aria-hidden="true" />
+                  )}
                 </div>
               );
             })}

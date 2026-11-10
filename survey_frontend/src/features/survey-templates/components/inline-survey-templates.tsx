@@ -349,7 +349,7 @@ export default function InlineSurveyTemplates() {
   };
 
   return (
-    <div className="w-full max-w-4xl pb-24">
+    <div className="flex min-h-full w-full flex-col">
       {detailTemplate ? (
         <TemplateTreeContext.Provider
           key={detailTemplate.id}
@@ -379,7 +379,7 @@ export default function InlineSurveyTemplates() {
           />
         </TemplateTreeContext.Provider>
       ) : (
-        <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+        <section className="w-full flex-1 rounded border bg-white p-4 shadow-md">
           <div className="mb-4 flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h2 className="text-2xl font-bold leading-tight text-blue-500 md:text-3xl">

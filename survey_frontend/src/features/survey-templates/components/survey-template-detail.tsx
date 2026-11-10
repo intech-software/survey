@@ -36,7 +36,7 @@ export default function SurveyTemplateDetail({
   const isActive = isSurveyTemplateActive(template);
 
   return (
-    <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+    <section className="w-full flex-1 rounded border bg-white p-4 shadow-md">
       <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-start gap-2">
           <Button
