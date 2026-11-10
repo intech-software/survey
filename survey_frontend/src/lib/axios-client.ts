@@ -26,21 +26,7 @@ const refreshClient = axios.create({
 
 const authEndpointPaths = [API_ROUTES.auth.login, API_ROUTES.auth.refreshToken];
 
-let isRefreshing = false;
-let refreshSubscribers: Array<{
-  resolve: (token: string) => void;
-  reject: (error: unknown) => void;
-}> = [];
-
-const notifyRefreshSuccess = (token: string) => {
-  refreshSubscribers.forEach((subscriber) => subscriber.resolve(token));
-  refreshSubscribers = [];
-};
-
-const notifyRefreshFailure = (error: unknown) => {
-  refreshSubscribers.forEach((subscriber) => subscriber.reject(error));
-  refreshSubscribers = [];
-};
+let refreshPromise: Promise<string> | null = null;
 
 const redirectToLogin = async () => {
   clearTokenCache();
@@ -61,6 +47,44 @@ const isInvalidSessionError = (error: unknown) => {
     return false;
   }
   return error.response?.status === 401 || error.response?.status === 403;
+};
+
+/**
+ * Single-flight refresh shared by REST retries and socket reconnects.
+ * Only a definite auth failure (401/403) ends the session.
+ */
+export const refreshAccessToken = (): Promise<string> => {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const { refreshToken } = getTokenCache();
+      if (!refreshToken) throw new Error("Missing refresh token");
+      const response = await refreshClient.post(API_ROUTES.auth.refreshToken, {
+        refreshToken,
+      });
+      const accessToken = (response.data as { accessToken?: string })
+        ?.accessToken;
+      if (typeof accessToken !== "string" || !accessToken) {
+        throw new Error("Invalid refresh response");
+      }
+      await fetch(API_ROUTES.internal.auth, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken, refreshToken }),
+      });
+      setTokenCache(accessToken, refreshToken);
+      return accessToken;
+    } catch (error) {
+      const { refreshToken } = getTokenCache();
+      if (!refreshToken || isInvalidSessionError(error)) {
+        await redirectToLogin();
+      }
+      throw error;
+    }
+  })().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
 };
 
 axiosClient.interceptors.request.use((config) => {
@@ -99,58 +123,10 @@ axiosClient.interceptors.response.use(
 
     originalRequest._retry = true;
 
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        refreshSubscribers.push({
-          resolve: (token) => {
-            originalRequest.headers = originalRequest.headers ?? {};
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            resolve(axiosClient(originalRequest));
-          },
-          reject,
-        });
-      });
-    }
-
-    isRefreshing = true;
-    try {
-      const { refreshToken } = getTokenCache();
-      if (!refreshToken) {
-        throw error;
-      }
-
-      const refreshResponse = await refreshClient.post(API_ROUTES.auth.refreshToken, {
-        refreshToken,
-      });
-      const newAccessToken = (refreshResponse.data as { accessToken?: string })
-        ?.accessToken;
-
-      if (!newAccessToken) {
-        throw error;
-      }
-
-      setTokenCache(newAccessToken, refreshToken);
-      await fetch(API_ROUTES.internal.auth, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accessToken: newAccessToken, refreshToken }),
-      });
-
-      notifyRefreshSuccess(newAccessToken);
-      originalRequest.headers = originalRequest.headers ?? {};
-      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-      return axiosClient(originalRequest);
-    } catch (refreshError) {
-      notifyRefreshFailure(refreshError);
-      // Only a definite authentication failure invalidates the local session.
-      // Temporary backend/network failures must not log the user out.
-      if (isInvalidSessionError(refreshError)) {
-        await redirectToLogin();
-      }
-      return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
-    }
+    const token = await refreshAccessToken();
+    originalRequest.headers = originalRequest.headers ?? {};
+    originalRequest.headers.Authorization = `Bearer ${token}`;
+    return axiosClient(originalRequest);
   },
 );
 

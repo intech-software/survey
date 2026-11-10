@@ -42,17 +42,29 @@ let tokenCache: TokenCache = loadTokenCache();
 
 export const getTokenCache = () => tokenCache;
 
+const tokenListeners = new Set<() => void>();
+
+/** Notifies listeners (e.g. realtime sockets) whenever the tokens change. */
+export const subscribeTokenCache = (listener: () => void) => {
+  tokenListeners.add(listener);
+  return () => {
+    tokenListeners.delete(listener);
+  };
+};
+
 export const setTokenCache = (
   accessToken: string | null,
   refreshToken: string | null
 ) => {
   tokenCache = { accessToken, refreshToken };
   persistTokenCache(tokenCache);
+  tokenListeners.forEach((listener) => listener());
 };
 
 export const clearTokenCache = () => {
   tokenCache = { accessToken: null, refreshToken: null };
   persistTokenCache(tokenCache);
+  tokenListeners.forEach((listener) => listener());
 };
 
 type TokenContextType = {

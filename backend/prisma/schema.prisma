@@ -20,6 +20,15 @@ model Users {
   deleted_at DateTime?
   tokens     Tokens[]
 
+  createdSurveyTemplates          SurveyTemplates[]          @relation("SurveyTemplateCreator")
+  createdSurveyTemplateStages     SurveyTemplateStages[]     @relation("SurveyTemplateStageCreator")
+  createdSurveyTemplateSteps      SurveyTemplateSteps[]      @relation("SurveyTemplateStepCreator")
+  createdSurveyTemplateParameters SurveyTemplateParameters[] @relation("SurveyTemplateParameterCreator")
+  createdSurveyRecords            SurveyRecords[]            @relation("SurveyRecordCreator")
+  checkedSurveyRecords            SurveyRecords[]            @relation("SurveyRecordChecker")
+  approvedSurveyRecords           SurveyRecords[]            @relation("SurveyRecordApprover")
+  recordedSurveyRecordParameters  SurveyRecordParameters[]   @relation("SurveyRecordParameterRecorder")
+
   @@map("users")
 }
 
@@ -33,4 +42,162 @@ model Tokens {
 
   @@index([user_id], map: "tokens_user_id_fkey")
   @@map("tokens")
+}
+
+model SurveyTemplates {
+  id            Int                    @id @default(autoincrement())
+  code          String                 @db.VarChar(50)
+  name          String                 @db.VarChar(255)
+  version       Int                    @default(1)
+  description   String?                @db.Text
+  status        String                 @default("active") @db.VarChar(20)
+  created_by_id Int
+  createdBy     Users                  @relation("SurveyTemplateCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "survey_templates_created_by_id_fkey")
+  created_at    DateTime               @default(now())
+  updated_at    DateTime               @default(now()) @updatedAt
+  stages        SurveyTemplateStages[]
+  records       SurveyRecords[]
+
+  @@unique([code, version], map: "survey_templates_code_version_key")
+  @@index([status], map: "survey_templates_status_idx")
+  @@index([created_by_id], map: "survey_templates_created_by_id_idx")
+  @@map("survey_templates")
+}
+
+model SurveyTemplateStages {
+  id                 Int                   @id @default(autoincrement())
+  survey_template_id Int
+  surveyTemplate     SurveyTemplates       @relation(fields: [survey_template_id], references: [id], onDelete: Cascade, map: "survey_template_stages_template_id_fkey")
+  stage_name         String                @db.VarChar(255)
+  stage_order        Int
+  created_by_id      Int
+  createdBy          Users                 @relation("SurveyTemplateStageCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "survey_template_stages_created_by_id_fkey")
+  created_at         DateTime              @default(now())
+  updated_at         DateTime              @default(now()) @updatedAt
+  steps              SurveyTemplateSteps[]
+
+  @@unique([survey_template_id, stage_order], map: "survey_template_stages_template_order_key")
+  @@index([created_by_id], map: "survey_template_stages_created_by_id_idx")
+  @@map("survey_template_stages")
+}
+
+model SurveyTemplateSteps {
+  id                       Int                        @id @default(autoincrement())
+  survey_template_stage_id Int
+  surveyTemplateStage      SurveyTemplateStages       @relation(fields: [survey_template_stage_id], references: [id], onDelete: Cascade, map: "survey_template_steps_stage_id_fkey")
+  step_name                String                     @db.VarChar(255)
+  step_order               Int
+  created_by_id            Int
+  createdBy                Users                      @relation("SurveyTemplateStepCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "survey_template_steps_created_by_id_fkey")
+  created_at               DateTime                   @default(now())
+  updated_at               DateTime                   @default(now()) @updatedAt
+  parameters               SurveyTemplateParameters[]
+
+  @@unique([survey_template_stage_id, step_order], map: "survey_template_steps_stage_order_key")
+  @@index([created_by_id], map: "survey_template_steps_created_by_id_idx")
+  @@map("survey_template_steps")
+}
+
+model SurveyTemplateParameters {
+  id                      Int                 @id @default(autoincrement())
+  survey_template_step_id Int
+  surveyTemplateStep      SurveyTemplateSteps @relation(fields: [survey_template_step_id], references: [id], onDelete: Cascade, map: "survey_template_parameters_step_id_fkey")
+  parameter_name          String              @db.VarChar(255)
+  data_type               String              @db.VarChar(30)
+  unit                    String?             @db.VarChar(50)
+  requirement             String              @db.Text
+  parameter_order         Int
+  created_by_id           Int
+  createdBy               Users               @relation("SurveyTemplateParameterCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "survey_template_parameters_created_by_id_fkey")
+  created_at              DateTime            @default(now())
+  updated_at              DateTime            @default(now()) @updatedAt
+
+  @@unique([survey_template_step_id, parameter_order], map: "survey_template_parameters_step_order_key")
+  @@index([created_by_id], map: "survey_template_parameters_created_by_id_idx")
+  @@map("survey_template_parameters")
+}
+
+model SurveyRecords {
+  id                 Int                  @id @default(autoincrement())
+  survey_template_id Int?
+  surveyTemplate     SurveyTemplates?     @relation(fields: [survey_template_id], references: [id], onDelete: SetNull, map: "survey_records_template_id_fkey")
+  template_code      String               @db.VarChar(50)
+  template_name      String               @db.VarChar(255)
+  template_version   Int
+  title              String               @db.VarChar(255)
+  project            String?              @db.VarChar(255)
+  location           String?              @db.VarChar(255)
+  survey_date        DateTime?            @db.Date
+  description        String?              @db.Text
+  created_by_id      Int
+  createdBy          Users                @relation("SurveyRecordCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "survey_records_created_by_fkey")
+  checked_by_id      Int?
+  checkedBy          Users?               @relation("SurveyRecordChecker", fields: [checked_by_id], references: [id], onDelete: SetNull, map: "survey_records_checked_by_fkey")
+  checked_at         DateTime?
+  approved_by_id     Int?
+  approvedBy         Users?               @relation("SurveyRecordApprover", fields: [approved_by_id], references: [id], onDelete: SetNull, map: "survey_records_approved_by_fkey")
+  approved_at        DateTime?
+  stages             SurveyRecordStages[]
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @default(now()) @updatedAt
+
+  @@index([survey_template_id], map: "survey_records_template_id_idx")
+  @@index([created_by_id], map: "survey_records_created_by_idx")
+  @@index([checked_by_id], map: "survey_records_checked_by_idx")
+  @@index([approved_by_id], map: "survey_records_approved_by_idx")
+  @@map("survey_records")
+}
+
+model SurveyRecordStages {
+  id                       Int                 @id @default(autoincrement())
+  survey_record_id         Int
+  surveyRecord             SurveyRecords       @relation(fields: [survey_record_id], references: [id], onDelete: Cascade, map: "survey_record_stages_record_id_fkey")
+  source_template_stage_id Int?
+  stage_name               String              @db.VarChar(255)
+  stage_order              Int
+  steps                    SurveyRecordSteps[]
+  created_at               DateTime            @default(now())
+  updated_at               DateTime            @default(now()) @updatedAt
+
+  @@unique([survey_record_id, stage_order], map: "survey_record_stages_order_key")
+  @@map("survey_record_stages")
+}
+
+model SurveyRecordSteps {
+  id                      Int                      @id @default(autoincrement())
+  survey_record_stage_id  Int
+  surveyRecordStage       SurveyRecordStages       @relation(fields: [survey_record_stage_id], references: [id], onDelete: Cascade, map: "survey_record_steps_stage_id_fkey")
+  source_template_step_id Int?
+  step_name               String                   @db.VarChar(255)
+  step_order              Int
+  parameters              SurveyRecordParameters[]
+  created_at              DateTime                 @default(now())
+  updated_at              DateTime                 @default(now()) @updatedAt
+
+  @@unique([survey_record_stage_id, step_order], map: "survey_record_steps_order_key")
+  @@map("survey_record_steps")
+}
+
+model SurveyRecordParameters {
+  id                           Int               @id @default(autoincrement())
+  survey_record_step_id        Int
+  surveyRecordStep             SurveyRecordSteps @relation(fields: [survey_record_step_id], references: [id], onDelete: Cascade, map: "survey_record_parameters_step_id_fkey")
+  source_template_parameter_id Int?
+  parameter_name               String            @db.VarChar(255)
+  data_type                    String            @db.VarChar(30)
+  unit                         String?           @db.VarChar(50)
+  requirement                  String            @db.Text
+  parameter_order              Int
+  result_value                 String?           @db.Text
+  note                         String?           @db.Text
+  result_image_path            String?           @db.Text
+  recorded_by_id               Int?
+  recordedBy                   Users?            @relation("SurveyRecordParameterRecorder", fields: [recorded_by_id], references: [id], onDelete: SetNull, map: "survey_record_parameters_recorder_fkey")
+  recorded_at                  DateTime?
+  created_at                   DateTime          @default(now())
+  updated_at                   DateTime          @default(now()) @updatedAt
+
+  @@unique([survey_record_step_id, parameter_order], map: "survey_record_parameters_order_key")
+  @@index([recorded_by_id], map: "survey_record_parameters_recorder_idx")
+  @@map("survey_record_parameters")
 }

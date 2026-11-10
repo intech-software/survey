@@ -4,16 +4,17 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { UPLOADS_ROOT, UPLOADS_URL_PREFIX } from './common/uploads';
+import { AVATAR_DIR, AVATAR_URL_PREFIX } from './common/uploads';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.enableCors({
     exposedHeaders: ['Content-Disposition'],
   });
-  // Public files such as avatars: GET /uploads/avatars/<file>.webp
-  app.useStaticAssets(UPLOADS_ROOT, {
-    prefix: UPLOADS_URL_PREFIX,
+  // Only avatars are public (GET /uploads/avatars/<file>.webp). Survey photos
+  // live under uploads/ too but are streamed by an authenticated endpoint.
+  app.useStaticAssets(AVATAR_DIR, {
+    prefix: AVATAR_URL_PREFIX,
     index: false,
     maxAge: '7d',
   });
