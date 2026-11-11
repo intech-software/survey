@@ -32,6 +32,7 @@ const DATA_TYPES = [
   'number',
   'decimal',
   'boolean',
+  'yes_no',
   'date',
   'datetime',
   'select',
@@ -456,7 +457,7 @@ export class SurveyRecordsService {
         ),
         data_type: this.normalizeDataType(dto?.data_type),
         unit: this.normalizeOptionalText(dto?.unit, 'unit', 50),
-        requirement: this.normalizeRequiredText(
+        requirement: this.normalizeOptionalText(
           dto?.requirement,
           'requirement',
         ),
@@ -489,7 +490,7 @@ export class SurveyRecordsService {
       data.unit = this.normalizeOptionalText(updateDto.unit, 'unit', 50);
     }
     if ('requirement' in updateDto) {
-      data.requirement = this.normalizeRequiredText(
+      data.requirement = this.normalizeOptionalText(
         updateDto.requirement,
         'requirement',
       );
@@ -929,7 +930,8 @@ export class SurveyRecordsService {
       return String(normalizedValue);
     }
 
-    if (dataType === 'boolean') {
+    if (dataType === 'boolean' || dataType === 'yes_no') {
+      // yes_no is stored like boolean: 'true' = Có, 'false' = Không có.
       if (value === true || value === 'true') return 'true';
       if (value === false || value === 'false') return 'false';
       throw new BadRequestException('result_value must be a boolean');

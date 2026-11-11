@@ -32,6 +32,38 @@ const changePassword = async ({
   return response.data;
 };
 
-const userService = { fetcherMe, uploadAvatar, changePassword };
+export type ManagedUserPayload = {
+  username?: string;
+  name?: string;
+  email?: string | null;
+  status?: "active" | "inactive";
+  password?: string;
+};
+
+const fetchUsers = async (): Promise<CurrentUser[]> =>
+  (await axiosClient.get<CurrentUser[]>(API_ROUTES.users.base)).data;
+
+const createUser = async (payload: ManagedUserPayload): Promise<CurrentUser> =>
+  (await axiosClient.post<CurrentUser>(API_ROUTES.users.base, payload)).data;
+
+const updateUser = async (
+  userId: number,
+  payload: ManagedUserPayload,
+): Promise<CurrentUser> =>
+  (await axiosClient.patch<CurrentUser>(API_ROUTES.users.detail(userId), payload))
+    .data;
+
+const deleteUser = async (userId: number): Promise<CurrentUser> =>
+  (await axiosClient.delete<CurrentUser>(API_ROUTES.users.detail(userId))).data;
+
+const userService = {
+  fetcherMe,
+  uploadAvatar,
+  changePassword,
+  fetchUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+};
 
 export default userService;

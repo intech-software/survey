@@ -1,10 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpException,
   HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
   Post,
   Request,
   UploadedFile,
@@ -30,6 +34,7 @@ import {
   AVATAR_MAX_BYTES,
 } from '../../common/uploads';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { CreateUserDto, UpdateUserDto } from './dto/manage-user.dto';
 import { UsersService } from './users.service';
 
 type AuthRequest = { user: { id: number } };
@@ -130,5 +135,46 @@ export class UsersController {
       );
     }
     return { message: 'Password changed successfully' };
+  }
+
+  // ---- User management (Cài đặt > Người dùng) ----------------------------
+
+  @Get()
+  @ApiOperation({ summary: 'Danh sách người dùng (chưa bị xóa)' })
+  findAll() {
+    return this.usersService.findAllForManagement();
+  }
+
+  @Post()
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  @ApiOperation({ summary: 'Thêm người dùng' })
+  @ApiBody({ type: CreateUserDto })
+  create(@Body() body: CreateUserDto) {
+    return this.usersService.createUser(body);
+  }
+
+  @Patch(':id')
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  @ApiOperation({
+    summary: 'Sửa người dùng / đặt lại mật khẩu / khóa tài khoản',
+  })
+  @ApiBody({ type: UpdateUserDto })
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateUserDto,
+    @Request() request: AuthRequest,
+  ) {
+    return this.usersService.updateUser(id, body, request.user.id);
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Xóa mềm người dùng (giữ tên trên các phiếu đã ký/nhập)',
+  })
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() request: AuthRequest,
+  ) {
+    return this.usersService.softDeleteUser(id, request.user.id);
   }
 }

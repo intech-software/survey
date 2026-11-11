@@ -82,6 +82,7 @@ export const SURVEY_PARAMETER_DATA_TYPES = [
   "number",
   "decimal",
   "boolean",
+  "yes_no",
   "date",
   "datetime",
   "select",
@@ -96,7 +97,7 @@ export type SurveyTemplateParameter = {
   parameter_name: string;
   data_type: SurveyParameterDataType;
   unit?: string | null;
-  requirement: string;
+  requirement?: string | null;
   parameter_order: number;
   created_by_id?: string | number | null;
   createdBy?: SurveyTemplateCreator | null;
@@ -108,7 +109,7 @@ export type CreateSurveyTemplateParameterPayload = {
   parameter_name: string;
   data_type: SurveyParameterDataType;
   unit?: string | null;
-  requirement: string;
+  requirement?: string | null;
   parameter_order: number;
 };
 

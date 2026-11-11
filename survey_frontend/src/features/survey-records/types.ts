@@ -18,7 +18,7 @@ export type SurveyRecordParameter = {
   parameter_name: string;
   data_type: SurveyParameterDataType;
   unit?: string | null;
-  requirement: string;
+  requirement?: string | null;
   parameter_order: number;
   result_value?: string | number | boolean | null;
   note?: string | null;

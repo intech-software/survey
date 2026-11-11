@@ -14,7 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { API_ROUTES } from "@/lib/api-routes";
 import surveyRecordsService from "@/services/survey-records.service";
-import { ArrowLeft, Check, Edit2, Loader2 } from "lucide-react";
+import { Check, Edit2, Loader2, Trash2, X } from "lucide-react";
+import Link from "next/link";
+import { AiOutlineRight } from "react-icons/ai";
 import Image from "next/image";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
@@ -27,6 +29,7 @@ import {
   getRecordStages,
   getStageSteps,
   getStepParameters,
+  getSurveyRecordErrorMessage,
   toDateInputValue,
 } from "../utils";
 import { useSurveyRecordSocket } from "../use-survey-record-socket";
@@ -37,12 +40,9 @@ import SurveyRecordResultInput from "./survey-record-result-input";
 import SurveyRecordStructureEditor from "./survey-record-structure-editor";
 
 const getErrorMessage = (
-  error: any,
+  error: unknown,
   fallback = "Không thể tải phiếu khảo sát.",
-) => {
-  const message = error?.response?.data?.message ?? error?.response?.data?.error;
-  return Array.isArray(message) ? message.join("; ") : message || fallback;
-};
+) => getSurveyRecordErrorMessage(error, fallback);
 
 type HeaderDraft = {
   title: string;
@@ -60,12 +60,16 @@ export default function SurveyRecordDetail({
   recordId,
   initialRecord,
   onClose,
+  onDeleted,
 }: {
   recordId: string | number;
   initialRecord?: SurveyRecord | null;
   onClose: () => void;
+  onDeleted?: () => void | Promise<void>;
 }) {
   const [isEditingStructure, setIsEditingStructure] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [headerDraft, setHeaderDraft] = useState<HeaderDraft | null>(null);
   const [isSavingHeader, setIsSavingHeader] = useState(false);
   const { data, error, isLoading, isValidating, mutate } = useSWR(
@@ -115,23 +119,36 @@ export default function SurveyRecordDetail({
 
   if (!record && isLoading) {
     return (
-      <section className="flex min-h-56 w-full flex-1 items-center justify-center rounded border bg-white shadow-md">
+      <div className="flex min-h-56 w-full items-center justify-center">
         <Loader2 className="size-7 animate-spin text-blue-500" />
-      </section>
+      </div>
     );
   }
 
   if (!record) {
     return (
-      <section className="w-full flex-1 rounded border bg-white p-4 shadow-md">
-        <Button type="button" variant="ghost" onClick={onClose}>
-          <ArrowLeft className="size-5" />
-          Quay lại
-        </Button>
+      <div className="w-full">
+        <div className="flex w-full items-center justify-between border-b border-gray-200 pb-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <Link className="shrink-0" href="/home">
+              Phiếu khảo sát
+            </Link>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-9"
+            onClick={onClose}
+            aria-label="Thoát detail"
+          >
+            <X className="size-5" />
+          </Button>
+        </div>
         <div className="mt-4 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {getErrorMessage(error)}
         </div>
-      </section>
+      </div>
     );
   }
 
@@ -182,10 +199,107 @@ export default function SurveyRecordDetail({
   const updateDraft = (field: keyof HeaderDraft, value: string) =>
     setHeaderDraft((current) => (current ? { ...current, [field]: value } : current));
 
+  const deleteRecord = async () => {
+    setIsDeleting(true);
+    try {
+      await surveyRecordsService.delete(record.id);
+      setIsDeleteOpen(false);
+      toast.success("Đã xóa phiếu khảo sát.");
+      await onDeleted?.();
+    } catch (deleteError) {
+      toast.error(getErrorMessage(deleteError, "Không thể xóa phiếu khảo sát."));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const breadcrumbTitle = [record.template_code, record.title]
+    .filter(Boolean)
+    .join(" - ");
+
   return (
-    <section className="w-full flex-1 overflow-hidden rounded border bg-white shadow-md">
+    <div className="w-full">
+      <div className="flex w-full items-center justify-between gap-2 border-b border-gray-200 pb-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Link className="shrink-0" href="/home">
+            Phiếu khảo sát
+          </Link>
+          <AiOutlineRight className="shrink-0" />
+          <p className="truncate" title={breadcrumbTitle}>
+            {breadcrumbTitle}
+          </p>
+          {isValidating ? (
+            <Loader2 className="size-4 shrink-0 animate-spin text-blue-400" />
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          {!isChecked ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="font-sans max-sm:size-9 max-sm:px-0"
+                onClick={openHeaderEditor}
+                title="Sửa thông tin phiếu"
+              >
+                <Edit2 className="size-4" />
+                <span className="max-sm:sr-only">Thông tin</span>
+              </Button>
+              <Button
+                type="button"
+                className={`font-sans max-sm:size-9 max-sm:px-0 ${
+                  isEditingStructure
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-slate-900 text-white hover:bg-slate-800"
+                }`}
+                onClick={() => setIsEditingStructure((current) => !current)}
+                title={
+                  isEditingStructure
+                    ? "Hoàn tất chỉnh sửa cấu trúc"
+                    : "Chỉnh sửa giai đoạn, bước, thông số"
+                }
+              >
+                {isEditingStructure ? (
+                  <Check className="size-4" />
+                ) : (
+                  <Edit2 className="size-4" />
+                )}
+                <span className="max-sm:sr-only">
+                  {isEditingStructure ? "Hoàn tất" : "Edit"}
+                </span>
+              </Button>
+            </>
+          ) : null}
+          {!isApproved ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9 text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={() => setIsDeleteOpen(true)}
+              title="Xóa phiếu khảo sát"
+              aria-label="Xóa phiếu khảo sát"
+            >
+              <Trash2 className="size-5" />
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-9"
+            onClick={onClose}
+            aria-label="Thoát detail"
+            title="Đóng"
+          >
+            <X className="size-5" />
+          </Button>
+        </div>
+      </div>
+
       {!connected ? (
-        <div className="flex items-center justify-between gap-2 border-b bg-amber-50 px-4 py-2 text-sm text-amber-800">
+        <div className="mt-2 flex items-center justify-between gap-2 rounded border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm text-amber-800">
           <span>Chưa kết nối cập nhật trực tiếp.</span>
           <Button
             type="button"
@@ -197,69 +311,16 @@ export default function SurveyRecordDetail({
           </Button>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-start gap-2 border-b p-4">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="mt-0.5 shrink-0"
-          onClick={onClose}
-          title="Quay lại danh sách phiếu khảo sát"
-          aria-label="Quay lại danh sách phiếu khảo sát"
-        >
-          <ArrowLeft className="size-5" />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold leading-tight text-blue-500 md:text-3xl">
-              Chi tiết phiếu khảo sát
-            </h2>
-            {isValidating ? (
-              <Loader2 className="size-4 shrink-0 animate-spin text-blue-400" />
-            ) : null}
-          </div>
-          <p className="mt-2 break-words text-sm font-medium text-gray-600 md:text-base">
-            {record.title}
-            {record.project ? ` - ${record.project}` : ""}
-          </p>
-        </div>
-        {!isChecked ? (
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="font-sans"
-              onClick={openHeaderEditor}
-            >
-              <Edit2 className="size-4" />
-              Thông tin
-            </Button>
-            <Button
-              type="button"
-              variant={isEditingStructure ? "default" : "outline"}
-              className="font-sans"
-              onClick={() => setIsEditingStructure((current) => !current)}
-            >
-              {isEditingStructure ? (
-                <Check className="size-4" />
-              ) : (
-                <Edit2 className="size-4" />
-              )}
-              {isEditingStructure ? "Hoàn tất" : "Chỉnh sửa"}
-            </Button>
-          </div>
-        ) : null}
-      </div>
 
       {error ? (
-        <div className="mx-4 mt-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
           Dữ liệu gần nhất vẫn đang được hiển thị. {getErrorMessage(error)}
         </div>
       ) : null}
 
-      <div className="overflow-x-auto bg-gray-50 p-2 sm:p-3">
+      <div className="mt-2 overflow-x-auto md:mt-4">
         <div
-          className="min-w-[760px] bg-white text-[15px] leading-6 text-black antialiased [text-rendering:optimizeLegibility]"
+          className="mx-auto min-w-[760px] max-w-[1100px] bg-white text-[15px] leading-6 text-black antialiased [text-rendering:optimizeLegibility]"
           style={{ fontFamily: '"Times New Roman", Times, serif' }}
         >
           <table className="w-full table-fixed border-collapse border border-black">
@@ -465,9 +526,12 @@ export default function SurveyRecordDetail({
                             ) : null}
                             <td className="whitespace-pre-wrap break-words border border-black px-2 py-2 align-top">
                               <span className="font-semibold">
-                                {parameter.parameter_name}:
-                              </span>{" "}
-                              {parameter.requirement}
+                                {parameter.parameter_name}
+                                {parameter.requirement ? ":" : ""}
+                              </span>
+                              {parameter.requirement
+                                ? ` ${parameter.requirement}`
+                                : null}
                             </td>
                             <td className="border border-black p-0 align-middle">
                               <SurveyRecordResultInput
@@ -612,6 +676,51 @@ export default function SurveyRecordDetail({
           </form>
         </DialogContent>
       </Dialog>
-    </section>
+      <Dialog
+        open={isDeleteOpen}
+        onOpenChange={(open) => {
+          if (!isDeleting) setIsDeleteOpen(open);
+        }}
+      >
+        <DialogContent className="font-sans sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xóa phiếu khảo sát</DialogTitle>
+            <DialogDescription>
+              Toàn bộ giai đoạn, bước, thông số, kết quả và hình ảnh của phiếu
+              sẽ bị xóa. Thao tác này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded border bg-slate-50 p-3 text-sm">
+            <p className="font-semibold text-slate-900">{record.title}</p>
+            <p className="mt-1 text-slate-600">
+              {record.template_code} v{record.template_version}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isDeleting}
+              onClick={() => setIsDeleteOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={() => void deleteRecord()}
+            >
+              {isDeleting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              {isDeleting ? "Đang xóa..." : "Xóa phiếu"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma.service';
+import { UsersService } from '../users/users.service';
 
 type AuthUser = { id: number; username: string };
 
@@ -9,6 +10,7 @@ export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly usersService: UsersService,
   ) {}
 
   async login(user: AuthUser) {
@@ -45,6 +47,10 @@ export class AuthService {
       return null;
     }
     if (payload.token_use !== 'refresh') {
+      return null;
+    }
+    // Disabled or deleted accounts cannot obtain new access tokens.
+    if (!(await this.usersService.isActive(Number(payload.sub)))) {
       return null;
     }
 

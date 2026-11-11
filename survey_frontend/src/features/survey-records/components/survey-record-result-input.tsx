@@ -170,7 +170,9 @@ export default function SurveyRecordResultInput({
     await save(nextValue);
   };
 
-  if (parameter.data_type === "boolean") {
+  if (parameter.data_type === "boolean" || parameter.data_type === "yes_no") {
+    const [trueLabel, falseLabel] =
+      parameter.data_type === "yes_no" ? ["Có", "Không có"] : ["Đúng", "Sai"];
     return (
       <div className="relative flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 px-1 py-1.5 font-sans text-sm text-blue-600">
         <label
@@ -185,7 +187,7 @@ export default function SurveyRecordResultInput({
             onChange={() => void saveBoolean(true)}
             className="size-4 accent-slate-900"
           />
-          Đúng
+          {trueLabel}
         </label>
         <label
           className={`inline-flex items-center gap-1.5 ${
@@ -199,7 +201,7 @@ export default function SurveyRecordResultInput({
             onChange={() => void saveBoolean(false)}
             className="size-4 accent-slate-900"
           />
-          Sai
+          {falseLabel}
         </label>
         <div className="ml-auto flex items-center gap-2">
           {parameter.unit ? (

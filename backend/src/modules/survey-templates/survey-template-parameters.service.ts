@@ -24,6 +24,7 @@ const DATA_TYPES = [
   'number',
   'decimal',
   'boolean',
+  'yes_no',
   'date',
   'datetime',
   'select',
@@ -103,7 +104,7 @@ export class SurveyTemplateParametersService {
             ),
             data_type: this.normalizeDataType(dto?.data_type),
             unit: this.normalizeOptionalText(dto?.unit, 'unit', 50),
-            requirement: this.normalizeRequiredText(
+            requirement: this.normalizeOptionalText(
               dto?.requirement,
               'requirement',
             ),
@@ -297,7 +298,7 @@ export class SurveyTemplateParametersService {
     }
 
     if ('requirement' in updateDto) {
-      data.requirement = this.normalizeRequiredText(
+      data.requirement = this.normalizeOptionalText(
         updateDto.requirement,
         'requirement',
       );

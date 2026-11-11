@@ -60,6 +60,7 @@ const DATA_TYPE_LABELS: Record<SurveyParameterDataType, string> = {
   number: "số",
   decimal: "số thập phân",
   boolean: "đúng/sai",
+  yes_no: "có/không có",
   date: "ngày",
   datetime: "ngày giờ",
   select: "lựa chọn",
@@ -152,7 +153,7 @@ export default function SurveyTemplateStepBlock({
       parameterName: parameter.parameter_name,
       dataType: parameter.data_type,
       unit: parameter.unit ?? "",
-      requirement: parameter.requirement,
+      requirement: parameter.requirement ?? "",
       parameterOrder: String(parameter.parameter_order),
     });
     setIsEditingRow(true);
@@ -161,7 +162,6 @@ export default function SurveyTemplateStepBlock({
   const validateForm = () => {
     const parameterName = form.parameterName.trim();
     const unit = form.unit.trim();
-    const requirement = form.requirement.trim();
     const parameterOrder = Number(form.parameterOrder);
 
     if (!parameterName) {
@@ -174,10 +174,6 @@ export default function SurveyTemplateStepBlock({
     }
     if (unit.length > 50) {
       toast.error("Đơn vị tính tối đa 50 ký tự.");
-      return false;
-    }
-    if (!requirement) {
-      toast.error("Vui lòng nhập yêu cầu của thông số.");
       return false;
     }
     if (!SURVEY_PARAMETER_DATA_TYPES.includes(form.dataType)) {
@@ -216,7 +212,7 @@ export default function SurveyTemplateStepBlock({
       parameter_name: form.parameterName.trim(),
       data_type: form.dataType,
       unit: form.unit.trim() || null,
-      requirement: form.requirement.trim(),
+      requirement: form.requirement.trim() || null,
       parameter_order: Number(form.parameterOrder),
     };
 
@@ -234,7 +230,7 @@ export default function SurveyTemplateStepBlock({
         if (nextValues.unit !== (editingParameter.unit ?? null)) {
           payload.unit = nextValues.unit;
         }
-        if (nextValues.requirement !== editingParameter.requirement) {
+        if (nextValues.requirement !== (editingParameter.requirement ?? null)) {
           payload.requirement = nextValues.requirement;
         }
         if (nextValues.parameter_order !== editingParameter.parameter_order) {
@@ -423,7 +419,9 @@ export default function SurveyTemplateStepBlock({
               <td className="border border-black px-2 py-1 align-top">
                 <div className="flex items-start justify-between gap-1">
                   <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
-                    {row.parameter.parameter_name}: {row.parameter.requirement}
+                    {row.parameter.requirement
+                      ? `${row.parameter.parameter_name}: ${row.parameter.requirement}`
+                      : row.parameter.parameter_name}
                   </span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -576,7 +574,7 @@ export default function SurveyTemplateStepBlock({
                   value={form.requirement}
                   rows={1}
                   disabled={isSubmitting}
-                  placeholder="Yêu cầu"
+                  placeholder="Yêu cầu (không bắt buộc)"
                   className="min-h-8 resize-none overflow-hidden rounded-sm border-black bg-white px-2 py-1 font-serif text-[15px] leading-5"
                   aria-label="Yêu cầu thông số"
                   onChange={(event) =>

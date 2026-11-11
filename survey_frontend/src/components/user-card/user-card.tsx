@@ -117,8 +117,7 @@ export default function UserCard({ user, variant = "default" }: UserCardProps) {
               <DropdownMenuSeparator />
             </>
           )}
-          {/* The settings page is not built yet. */}
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem onClick={() => router.push("/setting")}>
             <Settings className="mr-2 h-4 w-4" />
             Cài đặt
           </DropdownMenuItem>

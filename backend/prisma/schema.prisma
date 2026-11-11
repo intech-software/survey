@@ -105,7 +105,7 @@ model SurveyTemplateParameters {
   parameter_name          String              @db.VarChar(255)
   data_type               String              @db.VarChar(30)
   unit                    String?             @db.VarChar(50)
-  requirement             String              @db.Text
+  requirement             String?             @db.Text
   parameter_order         Int
   created_by_id           Int
   createdBy               Users               @relation("SurveyTemplateParameterCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "survey_template_parameters_created_by_id_fkey")
@@ -186,7 +186,7 @@ model SurveyRecordParameters {
   parameter_name               String            @db.VarChar(255)
   data_type                    String            @db.VarChar(30)
   unit                         String?           @db.VarChar(50)
-  requirement                  String            @db.Text
+  requirement                  String?           @db.Text
   parameter_order              Int
   result_value                 String?           @db.Text
   note                         String?           @db.Text

@@ -57,6 +57,7 @@ export class CreateSurveyRecordParameterDto {
       'number',
       'decimal',
       'boolean',
+      'yes_no',
       'date',
       'datetime',
       'select',
@@ -64,7 +65,7 @@ export class CreateSurveyRecordParameterDto {
   })
   data_type?: string | null;
   @ApiPropertyOptional({ example: '°C' }) unit?: string | null;
-  @ApiProperty({ example: '18 - 25' }) requirement?: string | null;
+  @ApiPropertyOptional({ example: '18 - 25' }) requirement?: string | null;
   @ApiProperty({ example: 1 }) parameter_order?: number | string | null;
 }
 

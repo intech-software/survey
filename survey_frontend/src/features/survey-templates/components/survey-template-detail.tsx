@@ -1,106 +1,187 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CircleOff, Edit2, Trash2 } from "lucide-react";
+import { API_ROUTES } from "@/lib/api-routes";
+import { surveyTemplatesService } from "@/services/index.service";
+import { CircleOff, Copy, Edit2, Loader2, Trash2, X } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMemo } from "react";
+import { AiOutlineRight } from "react-icons/ai";
+import useSWR from "swr";
 import type { SurveyTemplate } from "../types";
 import {
   formatDate,
   formatDateTime,
   getCreatorLabel,
+  getErrorMessage,
   getSurveyTemplateStatusLabel,
   isSurveyTemplateActive,
 } from "../utils";
 import SurveyTemplateStages from "./survey-template-stages";
+import { TemplateTreeContext } from "./template-tree-context";
+import { useSurveyTemplateDialogs } from "./use-survey-template-dialogs";
+
+function DetailHeader({
+  title,
+  onClose,
+  children,
+}: {
+  title?: string;
+  onClose: () => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex w-full items-center justify-between gap-2 border-b border-gray-200 pb-2">
+      <div className="flex min-w-0 items-center gap-2">
+        <Link className="shrink-0" href="/templates">
+          Template
+        </Link>
+        {title ? (
+          <>
+            <AiOutlineRight className="shrink-0" />
+            <p className="truncate" title={title}>
+              {title}
+            </p>
+          </>
+        ) : null}
+      </div>
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        {children}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-9"
+          onClick={onClose}
+          aria-label="Thoát detail"
+          title="Đóng"
+        >
+          <X className="size-5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function SurveyTemplateDetail({
-  template,
-  isLoading = false,
-  errorMessage,
+  templateId,
   onClose,
-  onEdit,
-  onDelete,
-  onDeactivate,
-  isSubmitting = false,
+  onDeleted,
 }: {
-  template: SurveyTemplate;
-  isLoading?: boolean;
-  errorMessage?: string | null;
+  templateId: number;
   onClose: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onDeactivate: () => void;
-  isSubmitting?: boolean;
+  onDeleted?: () => void | Promise<void>;
 }) {
+  const router = useRouter();
+  const { data: templates } = useSWR<SurveyTemplate[]>(
+    API_ROUTES.surveyTemplates.base,
+    surveyTemplatesService.fetchAll,
+  );
+  const listTemplate = useMemo(
+    () => templates?.find((template) => template.id === templateId) ?? null,
+    [templates, templateId],
+  );
+  const {
+    data: fetchedTemplate,
+    error: detailError,
+    isLoading,
+    mutate,
+  } = useSWR(
+    API_ROUTES.surveyTemplates.detail(templateId),
+    () => surveyTemplatesService.fetchById(templateId),
+    { revalidateOnFocus: false, revalidateOnReconnect: false },
+  );
+  const { dialogs, isSubmitting, openEdit, openClone, openDelete, openDeactivate } =
+    useSurveyTemplateDialogs({
+      onDeleted,
+      onCreated: (created) =>
+        router.push(`/templates/${created.id}`, { scroll: false }),
+    });
+
+  const template: SurveyTemplate | null = fetchedTemplate ?? listTemplate;
+
+  if (!template) {
+    return (
+      <div className="w-full">
+        <DetailHeader onClose={onClose} />
+        {isLoading ? (
+          <div className="flex min-h-56 items-center justify-center">
+            <Loader2 className="size-7 animate-spin text-blue-500" />
+          </div>
+        ) : (
+          <div className="mt-4 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {getErrorMessage(detailError, "Không tìm thấy template khảo sát.")}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const isActive = isSurveyTemplateActive(template);
+  const errorMessage = detailError
+    ? getErrorMessage(detailError, "Không thể tải dữ liệu mới nhất của template.")
+    : null;
+  const actionClassName = "font-sans max-sm:size-9 max-sm:px-0";
 
   return (
-    <section className="w-full flex-1 rounded border bg-white p-4 shadow-md">
-      <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-2">
+    <TemplateTreeContext.Provider
+      value={{ template: fetchedTemplate, mutate, isLoading, error: detailError }}
+    >
+    <div className="w-full">
+      <DetailHeader
+        title={`${template.code} - ${template.name}`}
+        onClose={onClose}
+      >
+        <Button
+          type="button"
+          variant="outline"
+          className={actionClassName}
+          onClick={() => openClone(template)}
+          disabled={isSubmitting}
+          title="Nhân bản thành phiên bản mới"
+        >
+          <Copy className="size-4" />
+          <span className="max-sm:sr-only">Nhân bản</span>
+        </Button>
+        <Button
+          type="button"
+          className={`${actionClassName} bg-slate-900 text-white hover:bg-slate-800`}
+          onClick={() => openEdit(template)}
+          disabled={isSubmitting}
+          title="Sửa thông tin template"
+        >
+          <Edit2 className="size-4" />
+          <span className="max-sm:sr-only">Edit</span>
+        </Button>
+        {isActive ? (
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="mt-0.5 shrink-0"
-            onClick={onClose}
-            title="Quay lại danh sách template"
-            aria-label="Quay lại danh sách template"
-          >
-            <ArrowLeft className="size-5" />
-          </Button>
-          <div className="min-w-0">
-            <h2 className="text-2xl font-bold leading-tight text-blue-500 md:text-3xl">
-              Chi tiết template khảo sát
-            </h2>
-            <p className="mt-2 break-words text-sm font-medium text-gray-600 md:text-base">
-              {template.code} - {template.name}
-            </p>
-            <Badge
-              variant="outline"
-              className={`mt-2 ${
-                isActive
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-slate-200 bg-slate-100 text-slate-600"
-              }`}
-            >
-              {getSurveyTemplateStatusLabel(template)}
-            </Badge>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2 self-end sm:self-auto">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onEdit}
-            disabled={isLoading || isSubmitting}
-          >
-            <Edit2 className="size-4" />
-            Sửa
-          </Button>
-          {isActive ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onDeactivate}
-              disabled={isLoading || isSubmitting}
-            >
-              <CircleOff className="size-4" />
-              Ngừng sử dụng
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={onDelete}
+            className="size-9 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+            onClick={() => openDeactivate(template)}
             disabled={isSubmitting}
+            title="Ngừng sử dụng"
+            aria-label="Ngừng sử dụng template"
           >
-            <Trash2 className="size-4" />
-            Xóa
+            <CircleOff className="size-5" />
           </Button>
-        </div>
-      </div>
+        ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-9 text-red-600 hover:bg-red-50 hover:text-red-700"
+          onClick={() => openDelete(template)}
+          disabled={isSubmitting}
+          title="Xóa template"
+          aria-label="Xóa template"
+        >
+          <Trash2 className="size-5" />
+        </Button>
+      </DetailHeader>
 
       {errorMessage ? (
         <div className="mt-4 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -114,9 +195,9 @@ export default function SurveyTemplateDetail({
         </div>
       ) : null}
 
-      <div className="mt-4 overflow-x-auto rounded border bg-gray-50 p-2 sm:p-4">
+      <div className="mt-2 overflow-x-auto md:mt-4">
         <div
-          className="min-w-[760px] bg-white text-[15px] leading-6 text-black antialiased [text-rendering:optimizeLegibility]"
+          className="mx-auto min-w-[760px] max-w-[1100px] bg-white text-[15px] leading-6 text-black antialiased [text-rendering:optimizeLegibility]"
           style={{ fontFamily: '"Times New Roman", Times, serif' }}
         >
           <table className="w-full table-fixed border-collapse border border-black">
@@ -236,6 +317,8 @@ export default function SurveyTemplateDetail({
           <SurveyTemplateStages templateId={template.id} />
         </div>
       </div>
-    </section>
+      {dialogs}
+    </div>
+    </TemplateTreeContext.Provider>
   );
 }

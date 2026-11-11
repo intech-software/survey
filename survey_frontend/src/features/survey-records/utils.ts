@@ -51,3 +51,28 @@ export const RECORD_STATUS_LABELS: Record<SurveyRecordStatus, string> = {
   checked: "Đang thực hiện",
   approved: "Đã phê duyệt",
 };
+
+const ERROR_MESSAGES: Record<string, string> = {
+  "Survey template is inactive": "Template đã ngừng sử dụng.",
+  "Survey template not found": "Không tìm thấy template.",
+  "Survey record not found": "Không tìm thấy phiếu khảo sát.",
+  "An approved survey record cannot be deleted":
+    "Không thể xoá phiếu đã được phê duyệt.",
+};
+
+/** Extracts the API error message (in Vietnamese when known). */
+export const getSurveyRecordErrorMessage = (
+  error: unknown,
+  fallback: string,
+) => {
+  const data = (
+    error as { response?: { data?: { message?: unknown; error?: unknown } } }
+  )?.response?.data;
+  const raw = data?.message ?? data?.error;
+  const message = Array.isArray(raw)
+    ? raw.join("; ")
+    : typeof raw === "string"
+      ? raw
+      : "";
+  return message ? (ERROR_MESSAGES[message] ?? message) : fallback;
+};

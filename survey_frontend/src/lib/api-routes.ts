@@ -8,6 +8,8 @@ const USERS = {
   me: "/users/me",
   uploadAvatar: "/users/me/avatar",
   changePassword: "/users/me/change-password",
+  base: "/users",
+  detail: (userId: string | number) => `/users/${userId}`,
 };
 
 const SURVEY_TEMPLATES = {

@@ -68,6 +68,7 @@ const DATA_TYPE_LABELS: Record<SurveyParameterDataType, string> = {
   number: "số",
   decimal: "số thập phân",
   boolean: "đúng/sai",
+  yes_no: "có/không có",
   date: "ngày",
   datetime: "ngày giờ",
   select: "lựa chọn",
@@ -148,7 +149,7 @@ export default function SurveyRecordStepEditor({
       parameterName: parameter.parameter_name,
       dataType: parameter.data_type,
       unit: parameter.unit ?? "",
-      requirement: parameter.requirement,
+      requirement: parameter.requirement ?? "",
       parameterOrder: String(parameter.parameter_order),
     });
     setIsEditingRow(true);
@@ -156,7 +157,6 @@ export default function SurveyRecordStepEditor({
 
   const validateForm = () => {
     const parameterName = form.parameterName.trim();
-    const requirement = form.requirement.trim();
     const parameterOrder = Number(form.parameterOrder);
     const unit = form.unit.trim();
     if (!parameterName) {
@@ -165,10 +165,6 @@ export default function SurveyRecordStepEditor({
     }
     if (parameterName.length > 255) {
       toast.error("Tên thông số tối đa 255 ký tự.");
-      return false;
-    }
-    if (!requirement) {
-      toast.error("Vui lòng nhập yêu cầu của thông số.");
       return false;
     }
     if (unit.length > 50) {
@@ -204,7 +200,7 @@ export default function SurveyRecordStepEditor({
       parameter_name: form.parameterName.trim(),
       data_type: form.dataType,
       unit: form.unit.trim() || null,
-      requirement: form.requirement.trim(),
+      requirement: form.requirement.trim() || null,
       parameter_order: Number(form.parameterOrder),
     };
 
@@ -221,7 +217,7 @@ export default function SurveyRecordStepEditor({
         if (nextValues.unit !== (editingParameter.unit ?? null)) {
           payload.unit = nextValues.unit;
         }
-        if (nextValues.requirement !== editingParameter.requirement) {
+        if (nextValues.requirement !== (editingParameter.requirement ?? null)) {
           payload.requirement = nextValues.requirement;
         }
         if (nextValues.parameter_order !== editingParameter.parameter_order) {
@@ -406,8 +402,11 @@ export default function SurveyRecordStepEditor({
               <td className="border border-black px-2 py-2 align-top">
                 <div className="flex items-start justify-between gap-1">
                   <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
-                    <span className="font-semibold">{row.parameter.parameter_name}:</span>{" "}
-                    {row.parameter.requirement}
+                    <span className="font-semibold">
+                      {row.parameter.parameter_name}
+                      {row.parameter.requirement ? ":" : ""}
+                    </span>
+                    {row.parameter.requirement ? ` ${row.parameter.requirement}` : null}
                   </span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -553,7 +552,7 @@ export default function SurveyRecordStepEditor({
                   value={form.requirement}
                   rows={1}
                   disabled={isSubmitting}
-                  placeholder="Yêu cầu"
+                  placeholder="Yêu cầu (không bắt buộc)"
                   className="min-h-8 resize-none rounded-sm border-black bg-white px-2 py-1 font-serif text-[15px]"
                   onChange={(event) =>
                     setForm((current) => ({ ...current, requirement: event.target.value }))
