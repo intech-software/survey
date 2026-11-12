@@ -47,6 +47,14 @@ const SURVEY_RECORDS = {
     `/survey-record-parameters/${parameterId}/result`,
   parameterImage: (parameterId: string | number) =>
     `/survey-record-parameters/${parameterId}/image`,
+  imageUploads: (parameterId: string | number) =>
+    `/survey-record-parameters/${parameterId}/image-uploads`,
+  imageUploadDetail: (uploadId: string) =>
+    `/survey-record-parameters/image-uploads/${uploadId}`,
+  imageUploadChunk: (uploadId: string, index: number) =>
+    `/survey-record-parameters/image-uploads/${uploadId}/chunks/${index}`,
+  imageUploadComplete: (uploadId: string) =>
+    `/survey-record-parameters/image-uploads/${uploadId}/complete`,
 };
 
 const INTERNAL = {

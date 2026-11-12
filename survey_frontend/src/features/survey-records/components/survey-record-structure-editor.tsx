@@ -341,11 +341,11 @@ export default function SurveyRecordStructureEditor({
         <table className="w-full table-fixed border-collapse border border-black">
           <colgroup>
             <col className="w-[17%]" />
-            <col className="w-[33%]" />
-            <col className="w-[14%]" />
+            <col className="w-[23%]" />
+            <col className="w-[27%]" />
             <col className="w-[14%]" />
             <col className="w-[8%]" />
-            <col className="w-[14%]" />
+            <col className="w-[11%]" />
           </colgroup>
           <thead>
             <tr>

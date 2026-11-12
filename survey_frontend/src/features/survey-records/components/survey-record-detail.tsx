@@ -450,11 +450,11 @@ export default function SurveyRecordDetail({
             <table className="mt-6 w-full table-fixed border-collapse border border-black">
               <colgroup>
                 <col className="w-[17%]" />
-                <col className="w-[33%]" />
-                <col className="w-[14%]" />
+                <col className="w-[23%]" />
+                <col className="w-[27%]" />
                 <col className="w-[14%]" />
                 <col className="w-[8%]" />
-                <col className="w-[14%]" />
+                <col className="w-[11%]" />
               </colgroup>
               <thead>
                 <tr>
@@ -556,10 +556,10 @@ export default function SurveyRecordDetail({
                                 onChanged={requestRefresh}
                               />
                             </td>
-                            <td className="break-words border border-black px-2 py-2 text-center align-middle text-sm leading-5">
+                            <td className="break-words border border-black px-1 py-2 text-center align-middle text-xs leading-4">
                               {getPersonLabel(parameter.recordedBy)}
                               {parameter.recorded_at ? (
-                                <span className="mt-1 block text-xs text-gray-600">
+                                <span className="mt-1 block text-[11px] text-gray-600">
                                   {formatRecordDateTime(parameter.recorded_at)}
                                 </span>
                               ) : null}

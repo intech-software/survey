@@ -1,9 +1,10 @@
 import 'dotenv/config';
 import { createServer } from 'node:http';
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { RequestAbortedFilter } from './common/request-aborted.filter';
 import { AVATAR_DIR, AVATAR_URL_PREFIX } from './common/uploads';
 
 async function bootstrap() {
@@ -11,6 +12,11 @@ async function bootstrap() {
   app.enableCors({
     exposedHeaders: ['Content-Disposition'],
   });
+  // Pieces of resumable photo uploads arrive as raw bytes (1 MB each).
+  app.useBodyParser('raw', { type: 'application/octet-stream', limit: '2mb' });
+  app.useGlobalFilters(
+    new RequestAbortedFilter(app.get(HttpAdapterHost).httpAdapter),
+  );
   // Only avatars are public (GET /uploads/avatars/<file>.webp). Survey photos
   // live under uploads/ too but are streamed by an authenticated endpoint.
   app.useStaticAssets(AVATAR_DIR, {

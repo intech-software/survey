@@ -3,12 +3,16 @@
 import { ImagePreviewDialog } from "@/components/authenticated-image/authenticated-image";
 import { Button } from "@/components/ui/button";
 import surveyRecordsService from "@/services/survey-records.service";
+import {
+  CHUNKED_IMAGE_MAX_BYTES,
+  type ChunkedUploadHandle,
+  uploadImageInChunks,
+} from "../chunked-image-upload";
 import { Camera, Eye, Loader2, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { SurveyRecordParameter } from "../types";
 
-const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -44,6 +48,8 @@ export default function SurveyRecordParameterImageCell({
 }) {
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const uploadHandle = useRef<ChunkedUploadHandle>({ uploadId: null });
   const [isDeleting, setIsDeleting] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const imagePath = parameter.result_image_path?.trim() ?? "";
@@ -56,27 +62,48 @@ export default function SurveyRecordParameterImageCell({
       ? `/survey-record-parameters/images/${encodeURIComponent(filename)}`
       : "");
 
-  const uploadImage = async (file?: File) => {
+  const uploadImage = async (file?: File, resume = false) => {
     if (readOnly || !file) return;
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
       toast.error("Ảnh phải có định dạng JPG, PNG, WEBP hoặc GIF.");
       return;
     }
-    if (file.size > MAX_IMAGE_SIZE) {
-      toast.error("Dung lượng ảnh tối đa là 20 MB.");
+    if (file.size > CHUNKED_IMAGE_MAX_BYTES) {
+      toast.error("Dung lượng ảnh tối đa là 40 MB.");
       return;
     }
+    if (!resume) uploadHandle.current = { uploadId: null };
 
     setIsUploading(true);
+    setProgress(0);
     try {
-      await surveyRecordsService.uploadParameterImage(
-        parameter.id,
+      await uploadImageInChunks({
+        parameterId: parameter.id,
         file,
-      );
-      toast.success("Đã lưu ảnh kết quả.");
+        handle: uploadHandle.current,
+        onProgress: setProgress,
+      });
+      toast.success("Đã lưu ảnh kết quả (chất lượng gốc).");
       await onChanged();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Không thể tải ảnh kết quả lên."));
+      const canResume = Boolean(uploadHandle.current.uploadId);
+      toast.error(
+        getErrorMessage(
+          error,
+          canResume
+            ? "Mạng bị gián đoạn, ảnh chưa tải xong."
+            : "Không thể tải ảnh kết quả lên.",
+        ),
+        canResume
+          ? {
+              duration: 30_000,
+              action: {
+                label: "Thử lại",
+                onClick: () => void uploadImage(file, true),
+              },
+            }
+          : undefined,
+      );
     } finally {
       setIsUploading(false);
       if (cameraInputRef.current) cameraInputRef.current.value = "";
@@ -145,6 +172,15 @@ export default function SurveyRecordParameterImageCell({
             )}
           </Button>
         )}
+        {isUploading ? (
+          <span
+            className="ml-1 text-[11px] tabular-nums text-blue-700"
+            role="status"
+            aria-label={`Đang tải ảnh ${progress}%`}
+          >
+            {progress}%
+          </span>
+        ) : null}
       </div>
 
       {viewerSrc && isViewerOpen ? (

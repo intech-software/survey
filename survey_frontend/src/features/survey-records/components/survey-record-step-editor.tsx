@@ -474,10 +474,10 @@ export default function SurveyRecordStepEditor({
                   onChanged={onChanged}
                 />
               </td>
-              <td className="break-words border border-black px-2 py-2 text-center align-middle text-sm leading-5">
+              <td className="break-words border border-black px-1 py-2 text-center align-middle text-xs leading-4">
                 {getRecordedBy(row.parameter)}
                 {row.parameter.recorded_at ? (
-                  <span className="mt-1 block text-xs text-gray-600">
+                  <span className="mt-1 block text-[11px] text-gray-600">
                     {formatRecordDateTime(row.parameter.recorded_at)}
                   </span>
                 ) : null}

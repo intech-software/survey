@@ -50,7 +50,9 @@ const thumbnailPathFor = (filePath: string) =>
   `${filePath.slice(0, -extname(filePath).length)}.thumb.webp`;
 
 /** Stores the original plus a WebP thumbnail; returns the API path to save. */
-export async function storeSurveyRecordImage(file: Express.Multer.File) {
+export async function storeSurveyRecordImage(
+  file: Pick<Express.Multer.File, 'buffer' | 'mimetype'>,
+) {
   const extension = EXTENSION_BY_MIME_TYPE.get(file.mimetype);
   if (!extension || !file.buffer?.length) {
     throw new BadRequestException('image is required');

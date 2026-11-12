@@ -24,6 +24,14 @@ import {
   resolveSurveyRecordImage,
   storeSurveyRecordImage,
 } from './survey-record-image.storage';
+import {
+  assembleImageUpload,
+  createImageUploadSession,
+  listReceivedChunks,
+  readImageUploadSession,
+  removeImageUploadSession,
+  writeImageChunk,
+} from './survey-record-image-chunks';
 
 type AuthenticatedUser = { id?: number | string | null };
 
@@ -597,7 +605,63 @@ export class SurveyRecordsService {
     return updated;
   }
 
-  async uploadParameterImage(parameterId: number, file: Express.Multer.File) {
+  // ---- Resumable (chunked) photo upload: original quality, 1 MB pieces ----
+
+  async startChunkedImageUpload(
+    parameterId: number,
+    dto: { mime_type?: unknown; size?: unknown },
+    user?: AuthenticatedUser,
+  ) {
+    await this.findParameterForEntryOrThrow(parameterId);
+    const session = await createImageUploadSession({
+      parameterId,
+      userId: this.normalizeUserId(user),
+      mimeType: dto?.mime_type,
+      size: dto?.size,
+    });
+    return { ...session, received_chunks: [] as number[] };
+  }
+
+  async getChunkedImageUpload(uploadId: string, user?: AuthenticatedUser) {
+    const session = await readImageUploadSession(
+      uploadId,
+      this.normalizeUserId(user),
+    );
+    return { ...session, received_chunks: await listReceivedChunks(session) };
+  }
+
+  async writeChunkedImagePart(
+    uploadId: string,
+    index: number,
+    body: unknown,
+    user?: AuthenticatedUser,
+  ) {
+    const session = await readImageUploadSession(
+      uploadId,
+      this.normalizeUserId(user),
+    );
+    await writeImageChunk(session, index, body);
+    return { upload_id: uploadId, index, received: true };
+  }
+
+  async completeChunkedImageUpload(uploadId: string, user?: AuthenticatedUser) {
+    const session = await readImageUploadSession(
+      uploadId,
+      this.normalizeUserId(user),
+    );
+    const buffer = await assembleImageUpload(session);
+    const updated = await this.uploadParameterImage(session.parameter_id, {
+      buffer,
+      mimetype: session.mime_type,
+    });
+    await removeImageUploadSession(uploadId);
+    return updated;
+  }
+
+  async uploadParameterImage(
+    parameterId: number,
+    file: Pick<Express.Multer.File, 'buffer' | 'mimetype'>,
+  ) {
     const parameter = await this.findParameterForEntryOrThrow(parameterId);
     const imagePath = await storeSurveyRecordImage(file);
 

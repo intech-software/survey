@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Request,
   Res,
@@ -196,6 +197,58 @@ export class SurveyRecordsController {
       throw new BadRequestException('image is required');
     }
     return this.service.uploadParameterImage(id, image);
+  }
+
+  // ---- Resumable photo upload (original quality, sent in 1 MB pieces) ----
+
+  @Post('survey-record-parameters/:id/image-uploads')
+  @ApiOperation({ summary: 'Bắt đầu tải ảnh gốc theo từng mảnh' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        mime_type: { type: 'string', example: 'image/jpeg' },
+        size: { type: 'integer', example: 6291456 },
+      },
+      required: ['mime_type', 'size'],
+    },
+  })
+  startImageUpload(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { mime_type?: unknown; size?: unknown },
+    @Request() req: AuthRequest,
+  ) {
+    return this.service.startChunkedImageUpload(id, body, req.user);
+  }
+
+  @Get('survey-record-parameters/image-uploads/:uploadId')
+  @ApiOperation({ summary: 'Các mảnh đã nhận (để tiếp tục khi bị ngắt)' })
+  getImageUpload(
+    @Param('uploadId') uploadId: string,
+    @Request() req: AuthRequest,
+  ) {
+    return this.service.getChunkedImageUpload(uploadId, req.user);
+  }
+
+  @Put('survey-record-parameters/image-uploads/:uploadId/chunks/:index')
+  @ApiOperation({ summary: 'Gửi một mảnh (application/octet-stream)' })
+  @ApiConsumes('application/octet-stream')
+  putImageChunk(
+    @Param('uploadId') uploadId: string,
+    @Param('index', ParseIntPipe) index: number,
+    @Body() body: unknown,
+    @Request() req: AuthRequest,
+  ) {
+    return this.service.writeChunkedImagePart(uploadId, index, body, req.user);
+  }
+
+  @Post('survey-record-parameters/image-uploads/:uploadId/complete')
+  @ApiOperation({ summary: 'Ghép các mảnh và lưu ảnh gốc' })
+  completeImageUpload(
+    @Param('uploadId') uploadId: string,
+    @Request() req: AuthRequest,
+  ) {
+    return this.service.completeChunkedImageUpload(uploadId, req.user);
   }
 
   @Get('survey-record-parameters/images/:filename')

@@ -333,9 +333,9 @@ export default function SurveyTemplateStages({
         >
           <colgroup>
             <col className="w-[25%]" />
-            <col className="w-[35%]" />
-            <col className="w-[20%]" />
-            <col className="w-[20%]" />
+            <col className="w-[25%]" />
+            <col className="w-[38%]" />
+            <col className="w-[12%]" />
           </colgroup>
           <thead>
             <tr>
